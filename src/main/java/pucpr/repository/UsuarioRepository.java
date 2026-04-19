@@ -22,8 +22,8 @@ public class UsuarioRepository {
      * 4. Retornar um Optional.of(usuario) se encontrar, ou Optional.empty() se não existir.
      */
     public Optional<Usuario> findByEmail(String email) {
-
-        return Optional.empty();
+        List<Usuario> usuarios = findAll();
+        return usuarios.stream().filter(usuario -> usuario.getEmail().equalsIgnoreCase(email)).findFirst();
     }
 
     /**
@@ -37,7 +37,6 @@ public class UsuarioRepository {
     public List<Usuario> findAll() {
         File file = new File(FILE_PATH);
         try {
-
             if (!file.exists()) {
                 return new ArrayList<>();
             }
@@ -62,7 +61,13 @@ public class UsuarioRepository {
      * atualizada no arquivo, garantindo que o JSON fique legível (formatado).
      */
     public void save(Usuario usuario) throws IOException {
-        // Implementar lógica de persistência
+        if (findByEmail(usuario.getEmail()).isPresent()){
+            throw new RuntimeException("Email já cadastrado!");
+        }
 
+        File file = new File(FILE_PATH);
+        List<Usuario> usuarios = findAll();
+        usuarios.add(usuario);
+        mapper.writerWithDefaultPrettyPrinter().writeValue(file, usuarios);
     }
 }
