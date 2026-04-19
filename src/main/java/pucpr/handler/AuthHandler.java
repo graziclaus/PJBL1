@@ -24,42 +24,55 @@ public class AuthHandler {
 
     public void handleLogin(HttpExchange exchange) throws IOException {
 
-        cors(exchange);
-        if ("OPTIONS".equals(exchange.getRequestMethod())) {
-            exchange.sendResponseHeaders(204, -1);
-            return;
-        }
+        try {
+            cors(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
 
-        if (!"POST".equals(exchange.getRequestMethod())) {
-            exchange.sendResponseHeaders(405, -1); // 405 Method Not Allowed
-            return;
-        }
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1); // 405 Method Not Allowed
+                return;
+            }
 
-        ObjectMapper mapper = new ObjectMapper();
-        Map<String, String> body = mapper.readValue(exchange.getRequestBody(), Map.class);
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, String> body = mapper.readValue(exchange.getRequestBody(), Map.class);
 
-        String email= body.get("email");
-        String password = body.get("password");
+            String email = body.get("email");
+            String password = body.get("password");
 
-        Optional<Usuario> optUsuario = repository.findByEmail(email);
+            Optional<Usuario> optUsuario = repository.findByEmail(email);
 
-        if (optUsuario.isEmpty() || !BCrypt.checkpw(password, optUsuario.get().getSenha())) {
-            String resposta = "{\"message\": \"E-mail ou senha inválidos.\"}";
+            if (optUsuario.isEmpty() || !BCrypt.checkpw(password, optUsuario.get().getSenha())) {
+                String resposta = "{\"message\": \"E-mail ou senha inválidos.\"}";
+                byte[] bytes = resposta.getBytes();
+                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(401, bytes.length);
+                exchange.getResponseBody().write(bytes);
+                exchange.getResponseBody().close();
+                return;
+            }
+
+            String token = jwtService.generateToken(optUsuario.get());
+            String resposta = "{\"token\": \"" + token + "\"}";
             byte[] bytes = resposta.getBytes();
             exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(401, bytes.length);
+            exchange.sendResponseHeaders(200, bytes.length);
             exchange.getResponseBody().write(bytes);
             exchange.getResponseBody().close();
-            return;
         }
+        catch (Exception e){
+            e.printStackTrace();
 
-        String token = jwtService.generateToken(optUsuario.get());
-        String resposta = "{\"token\": \"" + token + "\"}";
-        byte[] bytes = resposta.getBytes();
-        exchange.getResponseHeaders().add("Content-Type", "application/json");
-        exchange.sendResponseHeaders(200, bytes.length);
-        exchange.getResponseBody().write(bytes);
-        exchange.getResponseBody().close();
+            String resposta = "{\"message\": \"Erro interno no servidor\"}";
+            byte[] bytes = resposta.getBytes();
+
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(500, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.getResponseBody().close();
+        }
 
         // System.out.println("Login realizado por: " + email);
     }
