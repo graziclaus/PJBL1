@@ -3,6 +3,7 @@ package pucpr.repository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import pucpr.model.Usuario;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +22,7 @@ public class UsuarioRepository {
      * 4. Retornar um Optional.of(usuario) se encontrar, ou Optional.empty() se não existir.
      */
     public Optional<Usuario> findByEmail(String email) {
+
         return Optional.empty();
     }
 
@@ -33,7 +35,21 @@ public class UsuarioRepository {
      * em uma List<Usuario>. Dica: Use 'new TypeReference<List<Usuario>>(){}'.
      */
     public List<Usuario> findAll() {
-        return new ArrayList<>();
+        File file = new File(FILE_PATH);
+        try {
+
+            if (!file.exists()) {
+                return new ArrayList<>();
+            }
+
+            return mapper.readValue(file,
+                    new com.fasterxml.jackson.core.type.TypeReference<List<Usuario>>() {
+                    });
+        }
+        catch (IOException e){
+            System.out.println("Erro ao ler arquivo");
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -47,5 +63,6 @@ public class UsuarioRepository {
      */
     public void save(Usuario usuario) throws IOException {
         // Implementar lógica de persistência
+
     }
 }
