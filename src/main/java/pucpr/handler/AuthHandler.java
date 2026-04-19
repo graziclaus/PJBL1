@@ -130,4 +130,38 @@ public class AuthHandler {
         exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
     }
+
+    public void handleRotaProtegida(HttpExchange exchange)throws IOException {
+        cors(exchange);
+
+        if ("OPTIONS".equals(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+        if (!"GET".equals(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(405, -1);
+            return;
+        }
+
+        String token = exchange.getRequestHeaders().getFirst("Authorization");
+        if (token == null){
+            exchange.sendResponseHeaders(401, -1);
+            return;
+        }
+
+        token = token.replace("Bearer ","");
+        if (!jwtService.validateToken(token)){
+            exchange.sendResponseHeaders(401, -1);
+            return;
+        }
+        else {
+            String email = jwtService.extractEmail(token);
+            String resposta = "{\"message\": \"Acesso permitido\", \"email\": \"" + email + "\"}";
+            byte[] bytes = resposta.getBytes();
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.getResponseBody().close();
+        }
+    }
 }
